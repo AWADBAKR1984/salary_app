@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول مفردات المرتب</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font for better Arabic display */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        /* Ensure table cells have padding */
+        th, td {
+            padding: 12px 15px;
+            text-align: right; /* Align text to the right for RTL */
+        }
+        /* Modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa;
+            float: left; /* Align to the left for RTL */
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Print specific styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .modal-content, .modal-content * {
+                visibility: visible;
+            }
+            .modal-content {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            .close-button, .print-button {
+                display: none; /* Hide buttons when printing */
+            }
+            .signature-area, .fingerprint-area {
+                border: 1px dashed #ccc;
+                padding: 10px;
+                margin-top: 20px;
+                text-align: center;
+                font-size: 0.9em;
+                color: #555;
+            }
+        }
+        .signature-area, .fingerprint-area {
+            border: 1px dashed #ccc;
+            padding: 10px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #555;
+        }
+        /* Inline edit input styling */
+        .inline-salary-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            text-align: right;
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container mx-auto p-6 bg-white rounded-lg shadow-lg">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">جدول مفردات مرتب الموظفين - Flow for Integrated services</h1>
+
+        <!-- Add New Employee Button -->
+        <div class="flex justify-center mb-6">
+            <button id="addEmployeeBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                إضافة عامل جديد ➕
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead class="bg-gray-100 border-b border-gray-200">
+                    <tr>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider rounded-tr-lg">الإجراءات</th>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">صافي المرتب</th>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">الوقت الإضافي (جنيه)</th>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">الحوافز</th>
+                        <!-- Removed الإجازات column -->
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">السلف</th>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">عدد أيام الغياب</th>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">الوظيفة</th>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">الرقم القومي</th>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider">المرتب الأساسي</th>
+                        <th class="py-3 px-4 text-sm font-semibold text-gray-600 uppercase tracking-wider rounded-tl-lg">اسم العامل</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeTableBody" class="divide-y divide-gray-200">
+                    <!-- Employee rows will be dynamically loaded here from localStorage -->
+                    <tr>
+                        <td colspan="10" class="text-center py-4 text-gray-500">جاري تحميل بيانات العمال...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- The Payslip Modal -->
+    <div id="payslipModal" class="modal">
+        <!-- Modal content -->
+        <div class="modal-content">
+            <span class="close-button" id="closePayslipModal">&times;</span>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">كشف راتب العامل</h2>
+            <div id="payslipContent" class="text-gray-700 text-lg leading-relaxed text-right">
+                <!-- Payslip content will be loaded here -->
+                <div class="loading-spinner"></div>
+                <p class="text-center text-gray-500 mt-4">جاري إنشاء كشف الراتب...</p>
+            </div>
+            <div class="flex justify-around mt-6">
+                <div class="signature-area w-1/2 mx-2">
+                    <p>توقيع الموظف:</p>
+                    <br><br>
+                    <p>_________________________</p>
+                </div>
+                <div class="fingerprint-area w-1/2 mx-2">
+                    <p>بصمة الإصبع:</p>
+                    <br><br>
+                    <p>[مكان بصمة الإصبع]</p>
+                </div>
+            </div>
+            <button id="printPayslipBtn" class="print-button bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 mt-4 w-full">
+                طباعة كشف راتب 🖨️
+            </button>
+        </div>
+    </div>
+
+    <!-- The Add Employee Modal -->
+    <div id="addEmployeeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeAddEmployeeModal">&times;</span>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">إضافة عامل جديد</h2>
+            <div class="mb-4">
+                <label for="newEmployeeName" class="block text-gray-700 text-lg font-bold mb-2">اسم العامل:</label>
+                <input type="text" id="newEmployeeName" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="أدخل اسم العامل" required>
+            </div>
+            <div class="mb-4">
+                <label for="newEmployeeNationalId" class="block text-gray-700 text-lg font-bold mb-2">الرقم القومي:</label>
+                <input type="text" id="newEmployeeNationalId" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="أدخل الرقم القومي" required>
+            </div>
+            <div class="mb-4">
+                <label for="newEmployeeJobTitle" class="block text-gray-700 text-lg font-bold mb-2">الوظيفة:</label>
+                <select id="newEmployeeJobTitle" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+                    <option value="عامل نظافة">عامل نظافة</option>
+                    <option value="مشرف">مشرف</option>
+                    <option value="مدير موقع">مدير موقع</option>
+                    <option value="موظف اداري">موظف اداري</option>
+                </select>
+            </div>
+            <!-- New Salary Input Fields for Add Employee Modal -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="newBasicSalary" class="block text-gray-700 text-lg font-bold mb-2">المرتب الأساسي (جنيه):</label>
+                    <input type="number" id="newBasicSalary" class="add-salary-input shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="0">
+                </div>
+                <div>
+                    <label for="newAbsentDays" class="block text-gray-700 text-lg font-bold mb-2">عدد أيام الغياب (يوم):</label>
+                    <input type="number" id="newAbsentDays" class="add-salary-input shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="0">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="newAdvances" class="block text-gray-700 text-lg font-bold mb-2">السلف (جنيه):</label>
+                    <input type="number" id="newAdvances" class="add-salary-input shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="0">
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="newBonus" class="block text-gray-700 text-lg font-bold mb-2">الحوافز (جنيه):</label>
+                    <input type="number" id="newBonus" class="add-salary-input shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="0">
+                </div>
+                <div>
+                    <label for="newOvertimeHours" class="block text-gray-700 text-lg font-bold mb-2">الوقت الإضافي (ساعة):</label>
+                    <input type="number" id="newOvertimeHours" class="add-salary-input shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" value="0">
+                </div>
+            </div>
+            <div class="mb-6">
+                <label for="newNetSalary" class="block text-gray-700 text-lg font-bold mb-2">صافي المرتب (جنيه):</label>
+                <input type="text" id="newNetSalary" class="shadow appearance-none border rounded-lg w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100 font-bold" readonly value="0 جنيه">
+            </div>
+            <!-- End New Salary Input Fields -->
+            <button id="saveNewEmployeeBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 w-full">
+                حفظ العامل الجديد
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        console.log("Script started.");
+
+        // Get elements for Payslip Modal
+        const payslipModal = document.getElementById("payslipModal");
+        const closePayslipModalBtn = document.getElementById("closePayslipModal");
+        const payslipContentDiv = document.getElementById("payslipContent");
+        const printPayslipBtn = document.getElementById("printPayslipBtn");
+
+        // Get elements for Add Employee Modal
+        const addEmployeeBtn = document.getElementById("addEmployeeBtn");
+        const addEmployeeModal = document.getElementById("addEmployeeModal");
+        const closeAddEmployeeModalBtn = document.getElementById("closeAddEmployeeModal");
+        const newEmployeeNameInput = document.getElementById("newEmployeeName");
+        const newEmployeeNationalIdInput = document.getElementById("newEmployeeNationalId");
+        const newEmployeeJobTitleSelect = document.getElementById("newEmployeeJobTitle");
+        const newBasicSalaryInput = document.getElementById("newBasicSalary");
+        const newAbsentDaysInput = document.getElementById("newAbsentDays");
+        const newAdvancesInput = document.getElementById("newAdvances");
+        const newBonusInput = document.getElementById("newBonus");
+        const newOvertimeHoursInput = document.getElementById("newOvertimeHours");
+        const newNetSalaryInput = document.getElementById("newNetSalary");
+        const addSalaryInputs = document.querySelectorAll('.add-salary-input');
+
+        const saveNewEmployeeBtn = document.getElementById("saveNewEmployeeBtn");
+        const employeeTableBody = document.getElementById("employeeTableBody");
+
+        // Variable to store the national ID of the employee currently being edited inline
+        let currentlyEditingNationalId = null;
+
+        // Array to hold employee data
+        let employees = [];
+
+        /**
+         * Loads employee data from localStorage.
+         */
+        function loadEmployees() {
+            console.log("Attempting to load employees from localStorage...");
+            const storedEmployees = localStorage.getItem('cleaningCompanyEmployees');
+            if (storedEmployees) {
+                try {
+                    employees = JSON.parse(storedEmployees);
+                    // Ensure all loaded employees have necessary fields for consistency
+                    employees.forEach(emp => {
+                        if (emp.leaveDays === undefined) emp.leaveDays = '0'; // For older data
+                        if (emp.overtimeHours === undefined) emp.overtimeHours = '0';
+                        if (emp.overtimeAmount === undefined) {
+                            emp.overtimeAmount = calculateOvertimeAmount(emp.jobTitle, parseFloat(emp.overtimeHours) || 0).toString();
+                        }
+                        emp.basicSalary = emp.basicSalary ? emp.basicSalary.toString() : '0';
+                        emp.absentDays = emp.absentDays ? emp.absentDays.toString() : '0';
+                        emp.advances = emp.advances ? emp.advances.toString() : '0';
+                        emp.bonus = emp.bonus ? emp.bonus.toString() : '0';
+                        
+                        const basic = parseFloat(emp.basicSalary) || 0;
+                        const absent = parseFloat(emp.absentDays) || 0;
+                        const advances = parseFloat(emp.advances) || 0;
+                        const bonus = parseFloat(emp.bonus) || 0;
+                        const overtimeAmount = parseFloat(emp.overtimeAmount) || 0;
+                        emp.netSalary = calculateNetSalary(basic, absent, advances, bonus, overtimeAmount).toString();
+                    });
+                    saveEmployees(); // Save updated structure back to localStorage
+                } catch (e) {
+                    console.error("Error parsing employees from localStorage, or updating structure:", e);
+                    employees = []; // Reset if parsing or update fails
+                }
+            } else {
+                console.log("No employees found in localStorage. Initializing with default data.");
+                employees = [
+                    { name: "أحمد محمود", nationalId: "28501010101010", jobTitle: "عامل نظافة", basicSalary: "3500", absentDays: "1", advances: "500", leaveDays: "0", bonus: "100", overtimeHours: "5", overtimeAmount: "200", netSalary: "3200" },
+                    { name: "فاطمة علي", nationalId: "29002020202020", jobTitle: "مشرف", basicSalary: "3700", absentDays: "0", advances: "0", leaveDays: "2", bonus: "0", overtimeHours: "6", overtimeAmount: "300", netSalary: "4000" },
+                    { name: "محمد حسين", nationalId: "29503030303030", jobTitle: "مدير موقع", basicSalary: "3000", absentDays: "3", advances: "200", leaveDays: "0", bonus: "50", overtimeHours: "0", overtimeAmount: "0", netSalary: "2800" },
+                    { name: "سارة كمال", nationalId: "29804040404040", jobTitle: "موظف اداري", basicSalary: "4500", absentDays: "0", advances: "0", leaveDays: "0", bonus: "200", overtimeHours: "0", overtimeAmount: "0", netSalary: "4700" }
+                ];
+                employees.forEach(emp => {
+                    const basic = parseFloat(emp.basicSalary) || 0;
+                    const absent = parseFloat(emp.absentDays) || 0;
+                    const advances = parseFloat(emp.advances) || 0;
+                    const bonus = parseFloat(emp.bonus) || 0;
+                    const overtimeAmount = parseFloat(emp.overtimeAmount) || 0;
+                    emp.netSalary = calculateNetSalary(basic, absent, advances, bonus, overtimeAmount).toString();
+                });
+                saveEmployees();
+            }
+            renderEmployeesTable(employees);
+        }
+
+        /**
+         * Saves the current employee data to localStorage.
+         */
+        function saveEmployees() {
+            console.log("Saving employees to localStorage:", employees);
+            localStorage.setItem('cleaningCompanyEmployees', JSON.stringify(employees));
+        }
+
+        /**
+         * Helper function to calculate overtime amount based on job title and hours.
+         * @param {string} jobTitle - The job title of the employee.
+         * @param {number} overtimeHours - Number of overtime hours.
+         * @returns {number} Calculated overtime amount.
+         */
+        function calculateOvertimeAmount(jobTitle, overtimeHours) {
+            let ratePerHour = 0;
+            if (jobTitle === "عامل نظافة") {
+                ratePerHour = 40;
+            } else if (jobTitle === "مشرف") {
+                ratePerHour = 50;
+            }
+            return overtimeHours * ratePerHour;
+        }
+
+        /**
+         * Calculates the net salary based on provided salary components.
+         * Applies absenteeism deduction only if absent days exceed 4.
+         * @param {number} basic - Basic salary.
+         * @param {number} absent - Number of absent days.
+         * @param {number} advances - Total advances.
+         * @param {number} bonus - Total bonus.
+         * @param {number} overtimeAmount - Total overtime amount (calculated from hours).
+         * @returns {number} Calculated net salary.
+         */
+        function calculateNetSalary(basic, absent, advances, bonus, overtimeAmount) {
+            const dailyRate = basic / 30;
+            let deductionsForAbsenteeism = 0;
+            // Apply deduction only if absent days exceed 4
+            if (absent > 4) {
+                deductionsForAbsenteeism = dailyRate * (absent - 4) * 2; // Deduct for days exceeding 4
+            }
+            let net = basic - deductionsForAbsenteeism - advances + bonus + overtimeAmount;
+            return Math.round(net); // Round to nearest whole number
+        }
+
+        /**
+         * Renders the employee table rows based on the provided employee data.
+         * Attaches event listeners to the "Generate Payslip", "Edit", and "Delete" buttons.
+         * @param {Array<Object>} employeesToRender - An array of employee objects.
+         */
+        function renderEmployeesTable(employeesToRender) {
+            console.log("Rendering employees table with", employeesToRender.length, "employees.");
+            employeeTableBody.innerHTML = ''; // Clear existing rows
+
+            if (employeesToRender.length === 0) {
+                employeeTableBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">لا يوجد عمال مضافون بعد. ابدأ بإضافة عامل جديد!</td></tr>`;
+                return;
+            }
+
+            employeesToRender.forEach(employee => {
+                const newRow = document.createElement('tr');
+                newRow.className = 'hover:bg-gray-50';
+                newRow.setAttribute('data-national-id', employee.nationalId); // Add ID to row
+
+                // Check if this row is currently being edited
+                if (employee.nationalId === currentlyEditingNationalId) {
+                    // Render in edit mode
+                    newRow.innerHTML = `
+                        <td class="py-3 px-4 text-sm text-gray-700 flex flex-col sm:flex-row gap-2">
+                            <button class="save-inline-btn bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-xs sm:text-sm" data-national-id="${employee.nationalId}" disabled>
+                                حفظ ✅
+                            </button>
+                            <button class="cancel-inline-btn bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-xs sm:text-sm" data-national-id="${employee.nationalId}">
+                                إلغاء ❌
+                            </button>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700 font-medium">
+                            <span class="net-salary-display">${employee.netSalary} جنيه</span>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700">
+                            <input type="number" class="inline-salary-input" data-field="overtimeHours" value="${employee.overtimeHours}" data-original-value="${employee.overtimeHours}" data-job-title="${employee.jobTitle}">
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700">
+                            <input type="number" class="inline-salary-input" data-field="bonus" value="${employee.bonus}" data-original-value="${employee.bonus}">
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700">
+                            <input type="number" class="inline-salary-input" data-field="advances" value="${employee.advances}" data-original-value="${employee.advances}">
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700">
+                            <input type="number" class="inline-salary-input" data-field="absentDays" value="${employee.absentDays}" data-original-value="${employee.absentDays}">
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.jobTitle}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.nationalId}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">
+                            <input type="number" class="inline-salary-input" data-field="basicSalary" value="${employee.basicSalary}" data-original-value="${employee.basicSalary}">
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.name}</td>
+                    `;
+                } else {
+                    // Render in display mode
+                    newRow.innerHTML = `
+                        <td class="py-3 px-4 text-sm text-gray-700 flex flex-col sm:flex-row gap-2">
+                            <button class="generate-payslip-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-xs sm:text-sm"
+                                data-name="${employee.name}"
+                                data-basic="${employee.basicSalary}"
+                                data-absent="${employee.absentDays}"
+                                data-advances="${employee.advances}"
+                                data-bonus="${employee.bonus}"
+                                data-overtime-hours="${employee.overtimeHours}"
+                                data-overtime-amount="${employee.overtimeAmount}"
+                                data-net="${employee.netSalary}"
+                                data-national-id="${employee.nationalId}"
+                                data-job-title="${employee.jobTitle}">
+                                إنشاء كشف راتب ✨
+                            </button>
+                            <button class="edit-inline-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-xs sm:text-sm"
+                                data-national-id="${employee.nationalId}">
+                                تعديل ✏️
+                            </button>
+                            <button class="delete-employee-btn bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 text-xs sm:text-sm"
+                                data-national-id="${employee.nationalId}"
+                                data-name="${employee.name}">
+                                مسح 🗑️
+                            </button>
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-700 font-medium">${employee.netSalary} جنيه</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.overtimeAmount} جنيه</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.bonus} جنيه</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.advances} جنيه</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.absentDays} يوم</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.jobTitle}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.nationalId}</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.basicSalary} جنيه</td>
+                        <td class="py-3 px-4 text-sm text-gray-700">${employee.name}</td>
+                    `;
+                }
+                employeeTableBody.appendChild(newRow);
+            });
+            attachButtonListeners(); // Re-attach all button listeners after rendering
+        }
+
+        /**
+         * Attaches event listeners to all dynamic buttons (Generate Payslip, Edit, Delete, Save Inline, Cancel Inline, Inline Salary Inputs).
+         * This function needs to be called whenever new buttons are added to the DOM.
+         */
+        function attachButtonListeners() {
+            console.log("Attempting to attach all button listeners...");
+            document.querySelectorAll('.generate-payslip-btn').forEach(button => {
+                button.removeEventListener('click', handleGeneratePayslipClick);
+                button.addEventListener('click', handleGeneratePayslipClick);
+            });
+            document.querySelectorAll('.edit-inline-btn').forEach(button => {
+                button.removeEventListener('click', handleEditInlineClick);
+                button.addEventListener('click', handleEditInlineClick);
+            });
+            document.querySelectorAll('.delete-employee-btn').forEach(button => {
+                button.removeEventListener('click', handleDeleteEmployeeClick);
+                button.addEventListener('click', handleDeleteEmployeeClick);
+            });
+            document.querySelectorAll('.save-inline-btn').forEach(button => {
+                button.removeEventListener('click', handleSaveInlineClick);
+                button.addEventListener('click', handleSaveInlineClick);
+            });
+            document.querySelectorAll('.cancel-inline-btn').forEach(button => {
+                button.removeEventListener('click', handleCancelInlineClick);
+                button.addEventListener('click', handleCancelInlineClick);
+            });
+            document.querySelectorAll('.inline-salary-input').forEach(input => {
+                input.removeEventListener('input', handleInlineSalaryInputChange);
+                input.addEventListener('input', handleInlineSalaryInputChange);
+            });
+        }
+
+        /**
+         * Handles the click event for "Generate Payslip" buttons.
+         * Fetches employee data from button's data attributes and calls Gemini API.
+         */
+        async function handleGeneratePayslipClick() {
+            console.log("Payslip button clicked. Showing modal.");
+            payslipModal.style.display = "flex";
+            payslipContentDiv.innerHTML = '<div class="loading-spinner"></div><p class="text-center text-gray-500 mt-4">جاري إنشاء كشف الراتب...</p>';
+
+            const name = this.dataset.name;
+            const basic = parseFloat(this.dataset.basic) || 0;
+            const absent = parseFloat(this.dataset.absent) || 0;
+            const advances = this.dataset.advances;
+            const bonus = this.dataset.bonus;
+            const overtimeHours = parseFloat(this.dataset.overtimeHours) || 0;
+            const overtimeAmount = parseFloat(this.dataset.overtimeAmount) || 0;
+            const net = this.dataset.net;
+            const nationalId = this.dataset.nationalId;
+            const jobTitle = this.dataset.jobTitle;
+
+            const dailyRate = basic / 30;
+            let absenteeismDeductionAmount = 0;
+            // Removed the conditional note about "applied only if absent days exceed 4"
+            // The prompt will now just state the deduction amount.
+            if (absent > 4) {
+                absenteeismDeductionAmount = (dailyRate * (absent - 4) * 2).toFixed(2);
+            }
+            
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = today.toLocaleDateString('ar-EG', options);
+
+            // Refined prompt: Removed the conditional note about absenteeism deduction.
+            // Explicitly ask for "تاريخ الإصدار"
+            const prompt = `Generate ONLY the payslip statement in Arabic, formatted clearly and professionally, for an employee named ${name}, who works as a ${jobTitle} (الرقم القومي: ${nationalId}) from Flow for Integrated services. Include the following details:
+- الراتب الأساسي: ${basic} جنيه
+- أيام الغياب: ${absent} يوم
+- الخصم المحدد للغياب: ${absenteeismDeductionAmount} جنيه
+- السلف: ${advances} جنيه
+- الحوافز: ${bonus} جنيه
+- الوقت الإضافي: ${overtimeHours} ساعة بقيمة ${overtimeAmount} جنيه
+- صافي المرتب: ${net} جنيه
+- تاريخ الإصدار: ${formattedDate}
+Ensure no extra text, introductions, or conclusions are included.`;
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+                const payload = { contents: chatHistory };
+                const apiKey = "AIzaSyDYl72r-ZAlBcJpnwqYVyaEMPwO8jfHGxc"; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    let text = result.candidates[0].content.parts[0].text;
+                    
+                    const payslipStartKeywords = ["شركة النظافة", "اسم الموظف", "كشف رواتب"];
+                    let payslipStartIndex = -1;
+                    for (const keyword of payslipStartKeywords) {
+                        const index = text.indexOf(keyword);
+                        if (index !== -1) {
+                            payslipStartIndex = index;
+                            break;
+                        }
+                    }
+
+                    const payslipEndKeywords = ["Important Notes:", "ملاحظات هامة:", "أتمنى أن يكون هذا مفيدًا", "I hope this is helpful"];
+                    let payslipEndIndex = text.length;
+                    for (const keyword of payslipEndKeywords) {
+                        const index = text.indexOf(keyword);
+                        if (index !== -1 && index < payslipEndIndex) {
+                            payslipEndIndex = index;
+                        }
+                    }
+
+                    if (payslipStartIndex !== -1) {
+                        text = text.substring(payslipStartIndex, payslipEndIndex).trim();
+                    } else {
+                        text = text.replace(/Absolutely! Here's a payslip statement tailored for.*?:/, '').trim();
+                        text = text.replace(/بالتأكيد! إليك كشف راتب مفصل لـ.*?:/, '').trim();
+                    }
+
+                    text = text.replace(/I hope this is helpful!/, '').trim();
+                    text = text.replace(/أتمنى أن يكون هذا مفيدًا!/, '').trim();
+                    text = text.replace(/ملاحظات:/, '').trim();
+
+                    payslipContentDiv.innerHTML = `<p>${text.replace(/\n/g, '<br>')}</p>`;
+                } else {
+                    payslipContentDiv.innerHTML = '<p class="text-red-500 text-center">لم يتمكن الذكاء الاصطناعي من إنشاء كشف الراتب. يرجى المحاولة مرة أخرى.</p>';
+                    console.error("Unexpected API response structure:", result);
+                }
+            } catch (error) {
+                payslipContentDiv.innerHTML = `<p class="text-red-500 text-center">حدث خطأ أثناء إنشاء كشف الراتب: ${error.message}</p>`;
+                console.error("Error generating payslip:", error);
+            }
+        }
+
+        /**
+         * Handles the click event for "Edit Inline" buttons.
+         * Sets the currently editing employee and re-renders the table to show inputs.
+         */
+        function handleEditInlineClick() {
+            console.log("Edit Inline button clicked.");
+            const nationalIdToEdit = this.dataset.nationalId;
+
+            // If another row is being edited, revert it first
+            if (currentlyEditingNationalId && currentlyEditingNationalId !== nationalIdToEdit) {
+                // Find the employee object for the previously edited row
+                const prevEmployee = employees.find(emp => emp.nationalId === currentlyEditingNationalId);
+                if (prevEmployee) {
+                    // Revert its state by re-rendering the table
+                    currentlyEditingNationalId = null; // Clear editing state
+                    renderEmployeesTable(employees); // This will re-render all rows to display mode
+                }
+            }
+
+            // Set the current editing employee
+            currentlyEditingNationalId = nationalIdToEdit;
+            renderEmployeesTable(employees); // Re-render to show inputs for the selected row
+        }
+
+        /**
+         * Handles input changes in inline editable salary fields.
+         * Updates net salary display and enables/disables the Save button.
+         */
+        function handleInlineSalaryInputChange(event) {
+            const row = event.target.closest('tr');
+            const nationalId = row.dataset.nationalId;
+            const saveButton = row.querySelector('.save-inline-btn');
+            const netSalaryDisplay = row.querySelector('.net-salary-display');
+
+            const employee = employees.find(emp => emp.nationalId === nationalId);
+            if (!employee) return;
+
+            // Get current values from inputs
+            const currentBasic = parseFloat(row.querySelector('[data-field="basicSalary"]').value) || 0;
+            const currentAbsent = parseFloat(row.querySelector('[data-field="absentDays"]').value) || 0;
+            const currentAdvances = parseFloat(row.querySelector('[data-field="advances"]').value) || 0;
+            const currentBonus = parseFloat(row.querySelector('[data-field="bonus"]').value) || 0;
+            const currentOvertimeHours = parseFloat(row.querySelector('[data-field="overtimeHours"]').value) || 0;
+            const jobTitle = employee.jobTitle; // Get job title from employee object directly
+
+            const calculatedOvertimeAmount = calculateOvertimeAmount(jobTitle, currentOvertimeHours);
+            const calculatedNet = calculateNetSalary(currentBasic, currentAbsent, currentAdvances, currentBonus, calculatedOvertimeAmount);
+
+            netSalaryDisplay.textContent = `${calculatedNet} جنيه`;
+
+            // Check if any value has changed from its original
+            let hasChanges = false;
+            row.querySelectorAll('.inline-salary-input').forEach(input => {
+                if (input.value !== input.dataset.originalValue) {
+                    hasChanges = true;
+                }
+            });
+
+            saveButton.disabled = !hasChanges;
+        }
+
+        /**
+         * Handles the click event for "Save Inline" button.
+         * Saves changes to localStorage and exits edit mode.
+         */
+        function handleSaveInlineClick() {
+            console.log("Save Inline button clicked.");
+            const nationalIdToSave = this.dataset.nationalId;
+            const row = this.closest('tr');
+
+            const employeeIndex = employees.findIndex(emp => emp.nationalId === nationalIdToSave);
+            if (employeeIndex === -1) {
+                alert("خطأ: لم يتم العثور على العامل المراد حفظه.");
+                return;
+            }
+
+            // Get updated values from inputs
+            const updatedBasic = row.querySelector('[data-field="basicSalary"]').value;
+            const updatedAbsent = row.querySelector('[data-field="absentDays"]').value;
+            const updatedAdvances = row.querySelector('[data-field="advances"]').value;
+            const updatedBonus = row.querySelector('[data-field="bonus"]').value;
+            const updatedOvertimeHours = row.querySelector('[data-field="overtimeHours"]').value;
+            const jobTitle = employees[employeeIndex].jobTitle; // Get job title from employee object
+
+            const updatedOvertimeAmount = calculateOvertimeAmount(jobTitle, parseFloat(updatedOvertimeHours) || 0).toString();
+            const updatedNet = calculateNetSalary(parseFloat(updatedBasic) || 0, parseFloat(updatedAbsent) || 0, parseFloat(updatedAdvances) || 0, parseFloat(updatedBonus) || 0, parseFloat(updatedOvertimeAmount) || 0).toString();
+
+            // Update employee object
+            employees[employeeIndex].basicSalary = updatedBasic;
+            employees[employeeIndex].absentDays = updatedAbsent;
+            employees[employeeIndex].advances = updatedAdvances;
+            employees[employeeIndex].bonus = updatedBonus;
+            employees[employeeIndex].overtimeHours = updatedOvertimeHours;
+            employees[employeeIndex].overtimeAmount = updatedOvertimeAmount;
+            employees[employeeIndex].netSalary = updatedNet;
+
+            saveEmployees(); // Persist to localStorage
+            currentlyEditingNationalId = null; // Exit edit mode
+            renderEmployeesTable(employees); // Re-render to display mode
+            console.log(`Employee ${nationalIdToSave} saved.`);
+        }
+
+        /**
+         * Handles the click event for "Cancel Inline" button.
+         * Reverts changes and exits edit mode.
+         */
+        function handleCancelInlineClick() {
+            console.log("Cancel Inline button clicked.");
+            currentlyEditingNationalId = null; // Exit edit mode
+            renderEmployeesTable(employees); // Re-render to display mode (will revert to original values)
+        }
+
+        /**
+         * Handles the click event for "Delete Employee" buttons.
+         * Removes the employee from the array and updates localStorage.
+         */
+        function handleDeleteEmployeeClick() {
+            const nationalIdToDelete = this.dataset.nationalId;
+            const employeeName = this.dataset.name;
+            console.log(`Delete button clicked for employee: ${employeeName} (ID: ${nationalIdToDelete})`);
+
+            if (confirm(`هل أنت متأكد أنك تريد حذف بيانات العامل ${employeeName}؟`)) {
+                employees = employees.filter(emp => emp.nationalId !== nationalIdToDelete);
+                saveEmployees();
+                renderEmployeesTable(employees);
+                console.log(`Employee ${employeeName} deleted.`);
+            } else {
+                console.log(`Deletion cancelled for employee: ${employeeName}.`);
+            }
+        }
+
+        // Payslip Modal Close Button
+        closePayslipModalBtn.onclick = function() {
+            payslipModal.style.display = "none";
+        }
+
+        // Add Employee Modal Open Button
+        addEmployeeBtn.onclick = function() {
+            console.log("Add Employee button clicked. Showing modal.");
+            // If another row is being edited, revert it first before opening add modal
+            if (currentlyEditingNationalId) {
+                currentlyEditingNationalId = null;
+                renderEmployeesTable(employees);
+            }
+            addEmployeeModal.style.display = "flex";
+            newEmployeeNameInput.value = '';
+            newEmployeeNationalIdInput.value = '';
+            newEmployeeJobTitleSelect.value = "عامل نظافة";
+            newBasicSalaryInput.value = "0";
+            newAbsentDaysInput.value = "0";
+            newAdvancesInput.value = "0";
+            newBonusInput.value = "0";
+            newOvertimeHoursInput.value = "0";
+            updateNetSalaryInAddModal();
+        }
+
+        // Add Employee Modal Close Button
+        closeAddEmployeeModalBtn.onclick = function() {
+            addEmployeeModal.style.display = "none";
+            newEmployeeNameInput.value = '';
+            newEmployeeNationalIdInput.value = '';
+            newEmployeeJobTitleSelect.value = "عامل نظافة";
+            newBasicSalaryInput.value = "0";
+            newAbsentDaysInput.value = "0";
+            newAdvancesInput.value = "0";
+            newBonusInput.value = "0";
+            newOvertimeHoursInput.value = "0";
+            newNetSalaryInput.value = "0 جنيه";
+        }
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target == payslipModal) {
+                payslipModal.style.display = "none";
+            }
+            if (event.target == addEmployeeModal) {
+                addEmployeeModal.style.display = "none";
+                newEmployeeNameInput.value = '';
+                newEmployeeNationalIdInput.value = '';
+                newEmployeeJobTitleSelect.value = "عامل نظافة";
+                newBasicSalaryInput.value = "0";
+                newAbsentDaysInput.value = "0";
+                newAdvancesInput.value = "0";
+                newBonusInput.value = "0";
+                newOvertimeHoursInput.value = "0";
+                newNetSalaryInput.value = "0 جنيه";
+            }
+        }
+
+        // Print Payslip Functionality
+        printPayslipBtn.onclick = function() {
+            console.log("Print Payslip button clicked.");
+            const printContent = document.createElement('div');
+            printContent.innerHTML = `
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">كشف راتب العامل</h2>
+                ${payslipContentDiv.innerHTML}
+                <div class="flex justify-around mt-6">
+                    <div class="signature-area w-1/2 mx-2">
+                        <p>توقيع الموظف:</p>
+                        <br><br>
+                        <p>_________________________</p>
+                    </div>
+                    <div class="fingerprint-area w-1/2 mx-2">
+                        <p>بصمة الإصبع:</p>
+                        <br><br>
+                        <p>[مكان بصمة الإصبع]</p>
+                    </div>
+                </div>
+            `;
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>كشف راتب</title>');
+            printWindow.document.write('<style>');
+            printWindow.document.write('body { font-family: \'Inter\', sans-serif; direction: rtl; text-align: right; margin: 20px; }');
+            printWindow.document.write('h2 { text-align: center; margin-bottom: 20px; }');
+            printWindow.document.write('p { line-height: 1.6; margin-bottom: 10px; }');
+            printWindow.document.write('.signature-area, .fingerprint-area { border: 1px dashed #ccc; padding: 10px; margin-top: 20px; text-align: center; font-size: 0.9em; color: #555; display: inline-block; width: 48%; vertical-align: top; }');
+            printWindow.document.write('.flex { display: flex; justify-content: space-around; }');
+            printWindow.document.write('.w-1\\/2 { width: 48%; }');
+            printWindow.document.write('.mx-2 { margin-left: 0.5rem; margin-right: 0.5rem; }');
+            printWindow.document.write('.mt-6 { margin-top: 1.5rem; }');
+            printWindow.document.write('</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(printContent.innerHTML);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            printWindow.close();
+        };
+
+        // Save New Employee Functionality to localStorage
+        saveNewEmployeeBtn.onclick = function() {
+            console.log("Save New Employee button clicked.");
+            const name = newEmployeeNameInput.value.trim();
+            const nationalId = newEmployeeNationalIdInput.value.trim();
+            const jobTitle = newEmployeeJobTitleSelect.value;
+
+            const newBasic = parseFloat(newBasicSalaryInput.value) || 0;
+            const newAbsent = parseFloat(newAbsentDaysInput.value) || 0;
+            const newAdvances = parseFloat(newAdvancesInput.value) || 0;
+            const newBonus = parseFloat(newBonusInput.value) || 0;
+            const newOvertimeHours = parseFloat(newOvertimeHoursInput.value) || 0;
+            
+            const newOvertimeAmount = calculateOvertimeAmount(jobTitle, newOvertimeHours);
+            const newNet = calculateNetSalary(newBasic, newAbsent, newAdvances, newBonus, newOvertimeAmount).toString();
+
+
+            if (name === "" || nationalId === "") {
+                alert("الرجاء إدخال اسم العامل والرقم القومي.");
+                return;
+            }
+
+            if (employees.some(emp => emp.nationalId === nationalId)) {
+                alert("الرقم القومي موجود بالفعل لعامل آخر. الرجاء إدخال رقم قومي فريد.");
+                return;
+            }
+
+            const newEmployee = {
+                name: name,
+                nationalId: nationalId,
+                jobTitle: jobTitle,
+                basicSalary: newBasic.toString(),
+                absentDays: newAbsent.toString(),
+                advances: newAdvances.toString(),
+                leaveDays: "0",
+                bonus: newBonus.toString(),
+                overtimeHours: newOvertimeHours.toString(),
+                overtimeAmount: newOvertimeAmount.toString(),
+                netSalary: newNet
+            };
+
+            employees.push(newEmployee);
+            saveEmployees();
+            renderEmployeesTable(employees);
+
+            addEmployeeModal.style.display = "none";
+            newEmployeeNameInput.value = '';
+            newEmployeeNationalIdInput.value = '';
+            newEmployeeJobTitleSelect.value = "عامل نظافة";
+            newBasicSalaryInput.value = "0";
+            newAbsentDaysInput.value = "0";
+            newAdvancesInput.value = "0";
+            newBonusInput.value = "0";
+            newOvertimeHoursInput.value = "0";
+            newNetSalaryInput.value = "0 جنيه";
+        };
+
+        // Load employees when the page loads
+        loadEmployees();
+    </script>
+</body>
+</html>
+
